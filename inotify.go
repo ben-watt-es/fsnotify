@@ -244,6 +244,7 @@ func (w *Watcher) readEvents() {
 			raw := (*unix.InotifyEvent)(unsafe.Pointer(&buf[offset]))
 
 			mask := uint32(raw.Mask)
+			cookie := uint32(raw.Cookie)
 			nameLen := uint32(raw.Len)
 
 			if mask&unix.IN_Q_OVERFLOW != 0 {
@@ -268,7 +269,7 @@ func (w *Watcher) readEvents() {
 				name += "/" + strings.TrimRight(string(bytes[0:nameLen]), "\000")
 			}
 
-			event := newEvent(name, mask)
+			event := newEvent(name, mask, cookie)
 
 			// Send the events that are not ignored on the events channel
 			if !event.ignoreLinux(w, raw.Wd, mask) {
@@ -313,8 +314,8 @@ func (e *Event) ignoreLinux(w *Watcher, wd int32, mask uint32) bool {
 }
 
 // newEvent returns an platform-independent Event based on an inotify mask.
-func newEvent(name string, mask uint32) Event {
-	e := Event{Name: name}
+func newEvent(name string, mask uint32, cookie uint32) Event {
+	e := Event{Name: name, cookie: cookie}
 	if mask&unix.IN_CREATE == unix.IN_CREATE || mask&unix.IN_MOVED_TO == unix.IN_MOVED_TO {
 		e.Op |= Create
 	}
